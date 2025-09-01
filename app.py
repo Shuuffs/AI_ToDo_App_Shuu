@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 CORS(app)
 
-# Load API key
+# Load OpenAI API key from .env
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -15,7 +15,6 @@ tasks = []
 next_id = 1
 
 # ------------------- Routes -------------------
-
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -50,44 +49,38 @@ def delete_task(task_id):
     return jsonify({"message": "Task deleted"}), 200
 
 # ------------------- AI Endpoint -------------------
-
 @app.route("/ai", methods=["POST"])
 def ai_command():
     user_text = request.json.get("user_text", "")
     if not user_text:
         return jsonify({"error": "No user text provided"}), 400
 
-    # Build a simple list of tasks for the AI to reference
-    task_list_text = "\n".join([f"{t['description']} (Completed: {t['completed']})" for t in tasks])
-
     system_prompt = f"""
-You are an AI assistant for a To-Do List application.
-You have access to the current tasks:
-{task_list_text if task_list_text else 'No tasks yet.'}
+You are a friendly AI assistant for a To-Do List app.
 
-When the user gives a command, decide if it should:
-1. Add a task
-2. Complete a task
-3. Delete a task
-4. Show tasks
-Otherwise, reply naturally.
+Rules:
+- Respond in JSON only for commands related to tasks:
+  - addTask(description: string)
+  - completeTask(description: string)
+  - deleteTask(description: string)
+  - viewTasks()
+- If input is casual chat, respond naturally in plain text.
 
-When performing actions, return JSON like this:
-{{"function": "addTask", "parameters": {{"description": "Task description"}}}}
-{{"function": "completeTask", "parameters": {{"description": "Task description"}}}}
-{{"function": "deleteTask", "parameters": {{"description": "Task description"}}}}
-{{"function": "viewTasks"}}
+Example:
+User: "Add buy milk"
+AI: {{"function": "addTask", "parameters": {{"description": "buy milk"}}}}
 
-If the input is casual chat or greeting, reply naturally without JSON.
+User: "Hello"
+AI: "Hello! How can I help you today?"
 
-User input: "{user_text}"
+User: "{user_text}"
 """
 
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "system", "content": system_prompt}],
-            temperature=0.2
+            temperature=0
         )
         ai_message = response.choices[0].message.content.strip()
         return jsonify({"ai_response": ai_message}), 200
@@ -95,6 +88,5 @@ User input: "{user_text}"
         return jsonify({"ai_response": f"Error: {str(e)}"}), 500
 
 # ------------------- Run -------------------
-
 if __name__ == "__main__":
     app.run(debug=True)
