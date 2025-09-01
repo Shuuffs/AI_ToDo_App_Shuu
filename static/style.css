@@ -1,0 +1,175 @@
+/* ------------------- General ------------------- */
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #121212;
+  color: #f0f0f0;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  display: flex;
+  width: 90%;
+  max-width: 1200px;
+  margin-top: 30px;
+  gap: 20px;
+}
+
+/* ------------------- Panels ------------------- */
+.tasks-panel,
+.chat-panel {
+  flex: 1;
+  background-color: #1e1e1e;
+  padding: 25px;
+  border-radius: 12px;
+  height: 650px;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+h2 {
+  margin-top: 0;
+  color: #00e0ff;
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+}
+
+/* ------------------- Task Manager ------------------- */
+#task-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 10px;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+#task-list li:hover {
+  background-color: #333;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+#task-list li span {
+  flex: 1;
+  word-break: break-word;
+}
+
+#task-list button {
+  margin-left: 8px;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+#task-list button:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+#task-list button:nth-child(2) {
+  background-color: #00c853; /* Complete button green */
+  color: #fff;
+}
+
+#task-list button:nth-child(3) {
+  background-color: #d50000; /* Delete button red */
+  color: #fff;
+}
+
+#new-task {
+  width: 70%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  margin-top: 10px;
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+  transition: all 0.2s;
+}
+
+#new-task:focus {
+  outline: 2px solid #00e0ff;
+  background-color: #333;
+}
+
+.tasks-panel button {
+  padding: 10px 15px;
+  margin-left: 10px;
+  background-color: #00b0ff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tasks-panel button:hover {
+  background-color: #0091ea;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* ------------------- Chat Panel ------------------- */
+#chat-box {
+  height: 500px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  border: 1px solid #333;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background-color: #2a2a2a;
+}
+
+.user {
+  color: #00b0ff;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.ai {
+  color: #69f0ae;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+#user-input {
+  width: 70%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+  transition: all 0.2s;
+}
+
+#user-input:focus {
+  outline: 2px solid #69f0ae;
+  background-color: #333;
+}
+
+.chat-panel button {
+  padding: 10px 15px;
+  margin-left: 10px;
+  background-color: #00e676;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.chat-panel button:hover {
+  background-color: #00c853;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}

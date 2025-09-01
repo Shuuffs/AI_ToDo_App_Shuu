@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AI To-Do List</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <div class="tasks-panel">
+        <h2>Task Manager</h2>
+        <ul id="task-list"></ul>
+        <input type="text" id="new-task" placeholder="New task..." />
+        <button onclick="addTask()">Add Task</button>
+      </div>
+
+      <div class="chat-panel">
+        <h2>AI Assistant</h2>
+        <div id="chat-box"></div>
+        <input type="text" id="user-input" placeholder="Talk to AI..." />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+    <script>
+      async function loadTasks() {
+        const res = await fetch("/tasks");
+        const tasks = await res.json();
+        const list = document.getElementById("task-list");
+        list.innerHTML = "";
+
+        tasks.forEach((t) => {
+          const li = document.createElement("li");
+
+          const descSpan = document.createElement("span");
+          descSpan.textContent = t.description;
+          descSpan.style.textDecoration = t.completed ? "line-through" : "none";
+          li.appendChild(descSpan);
+
+          const completeBtn = document.createElement("button");
+          completeBtn.textContent = "✅";
+          completeBtn.onclick = () => completeTaskByName(t.description);
+          li.appendChild(completeBtn);
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.textContent = "🗑";
+          deleteBtn.onclick = () => deleteTaskByName(t.description);
+          li.appendChild(deleteBtn);
+
+          list.appendChild(li);
+        });
+      }
+
+      async function addTask() {
+        const desc = document.getElementById("new-task").value;
+        if (!desc) return;
+        await fetch("/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ description: desc }),
+        });
+        document.getElementById("new-task").value = "";
+        loadTasks();
+      }
+
+      async function completeTaskByName(name) {
+        const res = await fetch("/tasks");
+        const tasks = await res.json();
+        const task = tasks.find(
+          (t) => t.description.toLowerCase() === name.toLowerCase()
+        );
+        if (task) {
+          await fetch(`/tasks/${task.id}/complete`, { method: "PUT" });
+          loadTasks();
+        }
+      }
+
+      async function deleteTaskByName(name) {
+        const res = await fetch("/tasks");
+        const tasks = await res.json();
+        const task = tasks.find(
+          (t) => t.description.toLowerCase() === name.toLowerCase()
+        );
+        if (task) {
+          await fetch(`/tasks/${task.id}`, { method: "DELETE" });
+          loadTasks();
+        }
+      }
+
+      async function sendMessage() {
+        const text = document.getElementById("user-input").value;
+        if (!text) return;
+        const chatBox = document.getElementById("chat-box");
+        chatBox.innerHTML += `<div class="user">You: ${text}</div>`;
+
+        const res = await fetch("/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_text: text }),
+        });
+        const data = await res.json();
+
+        try {
+          const aiResp = JSON.parse(data.ai_response);
+
+          if (aiResp.function === "addTask")
+            await addTask(aiResp.parameters.description);
+          else if (aiResp.function === "completeTask")
+            await completeTaskByName(aiResp.parameters.description);
+          else if (aiResp.function === "deleteTask")
+            await deleteTaskByName(aiResp.parameters.description);
+          else if (aiResp.function === "viewTasks") await loadTasks();
+
+          chatBox.innerHTML += `<div class="ai">AI executed: ${aiResp.function}</div>`;
+        } catch {
+          chatBox.innerHTML += `<div class="ai">AI: ${data.ai_response}</div>`;
+        }
+
+        document.getElementById("user-input").value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      window.onload = loadTasks;
+    </script>
+  </body>
+</html>
