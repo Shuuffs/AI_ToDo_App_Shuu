@@ -29,7 +29,12 @@ def add_task():
     data = request.get_json()
     if not data or "description" not in data:
         return jsonify({"error": "Task description is required"}), 400
-    task = {"id": next_id, "description": data["description"], "completed": False}
+    task = {
+        "id": next_id,
+        "description": data["description"],
+        "completed": False,
+        "due_time": data.get("due_time", None)
+    }
     tasks.append(task)
     next_id += 1
     return jsonify(task), 201
@@ -48,6 +53,19 @@ def delete_task(task_id):
     tasks = [task for task in tasks if task["id"] != task_id]
     return jsonify({"message": "Task deleted"}), 200
 
+# ------------------- Complete All / Delete All -------------------
+@app.route("/tasks/complete_all", methods=["PUT"])
+def complete_all_tasks():
+    for task in tasks:
+        task["completed"] = True
+    return jsonify({"message": "All tasks completed"}), 200
+
+@app.route("/tasks/delete_all", methods=["DELETE"])
+def delete_all_tasks():
+    global tasks
+    tasks = []
+    return jsonify({"message": "All tasks deleted"}), 200
+
 # ------------------- AI Endpoint -------------------
 @app.route("/ai", methods=["POST"])
 def ai_command():
@@ -59,16 +77,40 @@ def ai_command():
 You are a friendly AI assistant for a To-Do List app.
 
 Rules:
-- Respond in JSON only for commands related to tasks:
-  - addTask(description: string)
-  - completeTask(description: string)
-  - deleteTask(description: string)
-  - viewTasks()
-- If input is casual chat, respond naturally in plain text.
+1. Respond in JSON for task commands:
+   - addTask(description: string, due_time: string optional)
+   - completeTask(description: string)
+   - completeAllTasks()
+   - deleteTask(description: string)
+   - deleteAllTasks()
+   - viewTasks()
+2. Handle multiple tasks in one request.
+3. Generate creative tasks if user asks for random tasks.
+4. Include optional due times if mentioned.
+5. Respond naturally in plain text for casual chat.
 
-Example:
+Examples:
 User: "Add buy milk"
 AI: {{"function": "addTask", "parameters": {{"description": "buy milk"}}}}
+
+User: "Add dinner and gaming"
+AI: [
+  {{"function": "addTask", "parameters": {{"description": "dinner"}}}},
+  {{"function": "addTask", "parameters": {{"description": "gaming"}}}}
+]
+
+User: "Add 3 random tasks"
+AI: [
+  {{"function": "addTask", "parameters": {{"description": "Go for a morning run"}}}},
+  {{"function": "addTask", "parameters": {{"description": "Read a book chapter"}}}},
+  {{"function": "addTask", "parameters": {{"description": "Clean your workspace"}}}}
+]
+
+User: "Complete all tasks"
+AI: {{"function": "completeAllTasks", "parameters": {{}}}}
+
+User: "Delete all tasks?"
+AI: {{"function": "deleteAllTasks", "parameters": {{}}}}
 
 User: "Hello"
 AI: "Hello! How can I help you today?"
@@ -80,7 +122,7 @@ User: "{user_text}"
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "system", "content": system_prompt}],
-            temperature=0
+            temperature=0.3
         )
         ai_message = response.choices[0].message.content.strip()
         return jsonify({"ai_response": ai_message}), 200

@@ -10,11 +10,9 @@
   </head>
   <body>
     <div class="container">
-      <!-- ------------------- Task Manager Panel ------------------- -->
+      <!-- Task Manager -->
       <div class="tasks-panel">
         <h2>Task Manager</h2>
-
-        <!-- Search and Filters -->
         <div class="task-controls">
           <input
             type="text"
@@ -33,16 +31,14 @@
             <option value="alphabetical">A → Z</option>
           </select>
         </div>
-
         <ul id="task-list"></ul>
-
         <div class="add-task">
           <input type="text" id="new-task" placeholder="New task..." />
           <button onclick="addTask()">Add Task</button>
         </div>
       </div>
 
-      <!-- ------------------- AI Assistant Panel ------------------- -->
+      <!-- AI Assistant -->
       <div class="chat-panel">
         <h2>AI Assistant</h2>
         <div id="chat-box"></div>
@@ -53,7 +49,6 @@
       </div>
     </div>
 
-    <!-- ------------------- Script ------------------- -->
     <script>
       let tasksCache = [];
 
@@ -74,28 +69,23 @@
         const sort = document.getElementById("sort-task").value;
 
         let tasks = [...tasksCache];
-
-        // Filter
         if (filter === "pending") tasks = tasks.filter((t) => !t.completed);
         if (filter === "completed") tasks = tasks.filter((t) => t.completed);
-
-        // Search
         if (search)
           tasks = tasks.filter((t) =>
             t.description.toLowerCase().includes(search)
           );
 
-        // Sort
         if (sort === "newest") tasks.sort((a, b) => b.id - a.id);
         if (sort === "oldest") tasks.sort((a, b) => a.id - b.id);
         if (sort === "alphabetical")
           tasks.sort((a, b) => a.description.localeCompare(b.description));
 
-        // Render
         tasks.forEach((t) => {
           const li = document.createElement("li");
           const desc = document.createElement("span");
-          desc.textContent = t.description;
+          desc.textContent =
+            t.description + (t.due_time ? ` (Due: ${t.due_time})` : "");
           desc.style.textDecoration = t.completed ? "line-through" : "none";
           li.appendChild(desc);
 
@@ -135,13 +125,25 @@
         await loadTasks();
       }
 
-      async function addTaskFromAI(desc) {
+      async function addTaskFromAI(desc, due_time) {
         await fetch("/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ description: desc }),
+          body: JSON.stringify({ description: desc, due_time }),
         });
         await loadTasks();
+      }
+
+      async function completeAllTasks() {
+        for (let task of tasksCache) {
+          await completeTask(task.id);
+        }
+      }
+
+      async function deleteAllTasks() {
+        for (let task of tasksCache) {
+          await deleteTask(task.id);
+        }
       }
 
       async function sendMessage() {
@@ -163,20 +165,16 @@
           parsed = JSON.parse(data.ai_response);
         } catch {}
 
-        if (parsed && parsed.function) {
-          const desc = parsed.parameters?.description;
-          let task = tasksCache.find(
-            (t) => t.description.toLowerCase() === desc?.toLowerCase()
-          );
-
-          if (parsed.function === "addTask") await addTaskFromAI(desc);
-          else if (parsed.function === "completeTask" && task)
-            await completeTask(task.id);
-          else if (parsed.function === "deleteTask" && task)
-            await deleteTask(task.id);
-          else if (parsed.function === "viewTasks") await loadTasks();
-
-          chatBox.innerHTML += `<div class="ai">AI executed: ${parsed.function}</div>`;
+        if (parsed) {
+          if (Array.isArray(parsed)) {
+            for (let cmd of parsed) {
+              const msg = await handleCommand(cmd);
+              if (msg) chatBox.innerHTML += `<div class="ai">AI: ${msg}</div>`;
+            }
+          } else {
+            const msg = await handleCommand(parsed);
+            if (msg) chatBox.innerHTML += `<div class="ai">AI: ${msg}</div>`;
+          }
         } else {
           chatBox.innerHTML += `<div class="ai">AI: ${data.ai_response}</div>`;
         }
@@ -184,6 +182,52 @@
         document.getElementById("user-input").value = "";
         chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: "smooth" });
       }
+
+      // Single, cleaned handleCommand
+      async function handleCommand(cmd) {
+        const desc = cmd.parameters?.description;
+        const due_time = cmd.parameters?.due_time;
+        let msg = "";
+
+        if (cmd.function === "addTask") {
+          await addTaskFromAI(desc, due_time);
+          msg = `Added "${desc}"${due_time ? ` (Due: ${due_time})` : ""}.`;
+        } else if (cmd.function === "completeTask") {
+          let task = tasksCache.find(
+            (t) => t.description.toLowerCase() === desc?.toLowerCase()
+          );
+          if (task) {
+            await completeTask(task.id);
+            msg = `Completed "${desc}".`;
+          }
+        } else if (cmd.function === "completeAllTasks") {
+          await completeAllTasks();
+          msg = "All tasks completed.";
+        } else if (cmd.function === "deleteTask") {
+          let task = tasksCache.find(
+            (t) => t.description.toLowerCase() === desc?.toLowerCase()
+          );
+          if (task) {
+            await deleteTask(task.id);
+            msg = `Deleted "${desc}".`;
+          }
+        } else if (cmd.function === "deleteAllTasks") {
+          await deleteAllTasks();
+          msg = "All tasks deleted.";
+        } else if (cmd.function === "viewTasks") {
+          await loadTasks();
+          msg = "Tasks listed.";
+        }
+
+        return msg;
+      }
+
+      // Press Enter to send
+      document
+        .getElementById("user-input")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") sendMessage();
+        });
 
       window.onload = loadTasks;
     </script>
